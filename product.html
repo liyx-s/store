@@ -1,1 +1,672 @@
+<!doctype html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Details • Liyog</title>
+    <meta name="description" content="Explore product details, reviews, and offers on Liyog.">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌿</text></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
 
+    <style>
+        :root {
+            --liyog-green: #28A428;
+            --liyog-green-light: #34bf49;
+            --liyog-green-dark: #228B22;
+            --liyog-deep-green: #006400;
+            --liyog-gold: #ffd700;
+            --liyog-orange: #ff7a00;
+            --liyog-blue: #1877F2;
+            --font-stack: 'Inter', sans-serif;
+        }
+
+        body { 
+            font-family: var(--font-stack); 
+            background-color: #f8fafc;
+            color: #1e293b; 
+        }
+        .shimmer::after {
+            content: ''; position: absolute; top: 0; right: 0; bottom: 0; left: 0;
+            transform: translateX(-100%);
+            background-image: linear-gradient(90deg, 
+                rgba(255, 255, 255, 0) 0%, 
+                rgba(255, 255, 255, 0.1) 20%, 
+                rgba(255, 255, 255, 0.4) 60%, 
+                rgba(255, 255, 255, 0) 100%
+            );
+            animation: shimmer 1.8s infinite;
+        }
+        @keyframes shimmer { 100% { transform: translateX(100%); } }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* Enhanced thumbnail active state */
+        .thumb-active {
+            outline: 3px solid var(--liyog-green);
+            outline-offset: 2px;
+            box-shadow: 0 0 0 4px rgba(40, 164, 40, 0.3);
+            transform: scale(1.05);
+            transition: all 0.2s ease-out;
+        }
+        .tab-btn-active {
+            color: var(--liyog-green-dark);
+            font-weight: 700;
+            border-color: var(--liyog-green);
+        }
+        .like-icon-filled {
+            color: #ef4444; /* red-500 */
+        }
+        .responsive-iframe-container {
+            position: relative;
+            width: 100%;
+            padding-bottom: 56.25%; /* 16:9 aspect ratio */
+            height: 0;
+            overflow: hidden;
+            border-radius: 0.5rem;
+        }
+        .responsive-iframe-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+        }
+
+        /* NEW: Styles for the innovative reviews section */
+        .star-rating-input input[type="radio"] { display: none; }
+        .star-rating-input label {
+            cursor: pointer;
+            font-size: 0;
+            color: #e5e7eb;
+            transition: color 0.2s ease-in-out;
+            padding: 2px;
+        }
+        .star-rating-input label svg {
+            width: 1.5rem;
+            height: 1.5rem;
+        }
+        .star-rating-input label:hover,
+        .star-rating-input label:hover ~ label { color: var(--liyog-gold); }
+        .star-rating-input input[type="radio"]:checked ~ label { color: var(--liyog-gold); }
+        .star-rating-input input[type="radio"]:checked + label { color: var(--liyog-gold); }
+        .star-rating-input {
+            direction: rtl;
+            display: inline-flex;
+        }
+        .star-rating-input > label:hover,
+        .star-rating-input > label:hover ~ label,
+        .star-rating-input > input.selected ~ label,
+        .star-rating-input > input:checked ~ label { color: var(--liyog-gold); }
+        .star-rating-input label:hover svg,
+        .star-rating-input label:hover ~ label svg,
+        .star-rating-input input[type="radio"]:checked ~ label svg { fill: var(--liyog-gold); }
+        .star-rating-input label:before {
+            content: "\2605";
+            font-size: 1.5rem;
+            margin-left: 2px;
+            visibility: hidden;
+        }
+        .star-rating-input label svg { visibility: visible; }
+
+        /* Glittering effect for helpful count - Enhanced for visibility */
+        .glittering-number {
+            position: relative;
+            display: inline-block;
+            overflow: hidden;
+            font-weight: bold; /* Make it bolder */
+            color: var(--liyog-gold); /* Default color for better visibility */
+        }
+        .glittering-active {
+            animation: glitter 1s ease-out forwards; /* Shorter, more punchy glitter */
+        }
+        @keyframes glitter {
+            0% { transform: scale(1); opacity: 1; text-shadow: 0 0 5px var(--liyog-gold); }
+            50% { transform: scale(1.2); opacity: 0.8; text-shadow: 0 0 15px var(--liyog-gold), 0 0 25px rgba(255,215,0,0.5); }
+            100% { transform: scale(1); opacity: 1; text-shadow: none; }
+        }
+
+        /* Bar chart for ratings distribution */
+        .rating-bar {
+            height: 10px;
+            background-color: #e5e7eb;
+            border-radius: 5px;
+            overflow: hidden;
+            position: relative;
+        }
+        .rating-fill {
+            height: 100%;
+            background-color: var(--liyog-green-light);
+            border-radius: 5px;
+            transition: width 0.3s ease-out;
+        }
+        .rating-bar-value {
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            background-color: transparent;
+            width: 100%;
+            cursor: pointer;
+        }
+        .rating-bar-value:hover .rating-fill { background-color: var(--liyog-green-dark); }
+        .rating-bar-wrapper.active .rating-fill { background-color: var(--liyog-deep-green); }
+        
+        /* Dynamic Avatar */
+        .avatar-initials {
+            background-color: var(--liyog-green-light);
+            color: white;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            border-radius: 9999px;
+        }
+
+        /* Skeleton Loader Enhancements */
+        .skeleton-media-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        .skeleton-media-item {
+            width: 80px;
+            height: 80px;
+            background-color: #e2e8f0; /* gray-200 */
+            border-radius: 0.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .skeleton-main-media {
+            aspect-square w-full bg-gray-200 rounded-lg h-full relative overflow-hidden;
+        }
+
+        /* Chart text color for visibility */
+        #ratings-distribution-chart .text-gray-200 {
+            color: #d1d5db; /* A lighter gray for better contrast on dark green */
+        }
+        #ratings-distribution-chart .text-gray-800 {
+            color: #f8fafc; /* White/very light for numbers on bars */
+            text-shadow: 0 0 2px rgba(0, 0, 0, 0.5); /* Add slight shadow for readability */
+        }
+        
+        /* Added for review form error styling */
+        .input-error {
+            border-color: #ef4444; /* red-500 */
+            box-shadow: 0 0 0 1px #ef4444;
+        }
+        .error-message {
+            color: #ef4444; /* red-500 */
+            font-size: 0.875rem; /* text-sm */
+            margin-top: 0.25rem;
+        }
+
+        /* Modal Styles (basic for now, can be enhanced with Tailwind) */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.75);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .modal.open {
+            opacity: 1;
+            visibility: visible;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            transform: translateY(-20px);
+            transition: transform 0.3s ease;
+        }
+        .modal.open .modal-content {
+            transform: translateY(0);
+        }
+
+/* Media Gallery Arrows */
+        .media-arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: rgba(0, 0, 0, 0.5);
+            color: white;
+            padding: 0.5rem;
+            border-radius: 9999px;
+            cursor: pointer;
+            z-index: 10;
+            opacity: 0.8;
+            transition: opacity 0.2s ease;
+        }
+        .media-arrow:hover { opacity: 1; }
+        .media-arrow.left { left: 0.5rem; }
+        .media-arrow.right { right: 0.5rem; }
+        .media-arrow svg { width: 1.5rem; height: 1.5rem; }
+
+        
+        /* Two-row thumbnails */
+        #thumbnails-wrapper.two-rows {
+            display: grid;
+            grid-auto-flow: column; /* Allows horizontal scrolling with variable columns */
+            grid-template-rows: repeat(2, minmax(0, 1fr)); /* Two rows */
+            grid-auto-columns: 80px; /* Each thumbnail takes 80px width */
+            gap: 0.75rem; /* gap-3 */
+            overflow-x: auto;
+            padding-bottom: 0.5rem; /* pb-2 */
+            scroll-snap-type: x mandatory; /* Optional: for smoother scrolling */
+            scroll-padding: 0.5rem;
+        }
+        #thumbnails-wrapper.two-rows .thumbnail-btn {
+            scroll-snap-align: start;
+            margin-bottom: 0; /* Remove default margin-bottom from flex */
+        }
+
+/* Ensure gallery section is a positioned container so absolutely positioned arrows sit over it */
+#media-gallery {
+  position: relative; /* <-- essential for gallery arrows to be positioned over gallery */
+}
+
+/* Make global gallery arrow visuals consistent and tappable */
+#gallery-prev, #gallery-next {
+  z-index: 40; /* ensure above most elements */
+  pointer-events: auto;
+  transition: transform 0.18s ease, opacity 0.25s ease;
+  opacity: 0.9;
+  backdrop-filter: blur(4px);
+}
+
+/* subtle hover/idle micro-animation */
+#gallery-prev:hover, #gallery-next:hover {
+  transform: translateY(-50%) scale(1.06);
+  opacity: 1;
+}
+
+/* Make sure arrows are nicely sized and easy to tap on mobile */
+#gallery-prev, #gallery-next {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+}
+
+/* Optional: fade out arrows when not needed (controlled by JS too) */
+#gallery-prev.opacity-0, #gallery-next.opacity-0 {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* >>> ADD FOR PRODUCT GALLERY IMPROVEMENTS <<< */
+
+/* ensure main media covers area elegantly without distortion */
+#main-media-viewer img,
+#main-media-viewer video,
+#main-media-viewer iframe {
+  width: 100%;
+  height: 100%;
+  object-fit: contain; /* preserve aspect ratio and avoid distortion */
+}
+
+/* video play overlay for thumbnails */
+.thumbnail-btn { position: relative; }
+.thumbnail-btn .video-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.32);
+  opacity: 0;
+  transition: opacity .18s ease;
+  border-radius: 0.5rem;
+}
+.thumbnail-btn:hover .video-overlay,
+.thumbnail-btn.active .video-overlay {
+  opacity: 1;
+}
+
+/* make arrows more tappable on mobile */
+.media-arrow { width: 44px; height: 44px; padding: 0.4rem; }
+
+/* small improvement for very long product names */
+#product-name {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
+
+/* Gallery Item Counter Overlay */
+#media-counter {
+  z-index: 15;
+}
+
+
+/* --- NEW: Instruction icon motion --- */
+@keyframes bounce-left-right {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(4px); }
+}
+.animate-bounce-left-right {
+  animation: bounce-left-right 2s infinite ease-in-out;
+}
+
+
+/* --- FIX: Prevent page scroll during swipe --- */
+.media-gallery {
+  display: flex;
+  overflow-x: auto;
+  overscroll-behavior-x: contain; /* isolate swipe motion */
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+body, html {
+  overscroll-behavior-y: contain; /* Prevent page bounce/scroll during swipe */
+}
+#main-media-viewer {
+  touch-action: pan-y; /* Allow vertical scrolls only, block unintended X drags */
+overscroll-behavior: contain;
+}
+
+/* --- MULTILAYER VIDEO ICON STYLE --- */
+@keyframes border-glow {
+  0%, 100% {
+    box-shadow:
+      0 0 8px #00ff88,
+      0 0 16px #00aaff,
+      0 0 24px #ffaa00,
+      0 0 32px #00ff88;
+  }
+  50% {
+    box-shadow:
+      0 0 16px #ffaa00,
+      0 0 32px #00ff88,
+      0 0 48px #00aaff,
+      0 0 64px #ffaa00;
+  }
+}
+.animate-border-glow {
+  animation: border-glow 3s infinite alternate ease-in-out;
+}
+
+/* --- CLICK FIRE / PREMIUM GLOW EFFECT --- */
+@keyframes video-btn-fire {
+  0% {
+    box-shadow:
+      0 0 5px rgba(255, 0, 0, 0.6),
+      0 0 10px rgba(255, 165, 0, 0.6),
+      0 0 15px rgba(255, 255, 0, 0.6);
+  }
+  50% {
+    box-shadow:
+      0 0 15px rgba(255, 0, 0, 0.9),
+      0 0 30px rgba(255, 165, 0, 0.9),
+      0 0 45px rgba(255, 255, 0, 0.9),
+      0 0 60px rgba(255, 255, 255, 1);
+  }
+  100% {
+    box-shadow:
+      0 0 5px rgba(255, 0, 0, 0.6),
+      0 0 10px rgba(255, 165, 0, 0.6),
+      0 0 20px rgba(255, 255, 0, 0.6);
+  }
+}
+
+.video-btn-fire {
+  animation: video-btn-fire 1.5s ease-out;
+}
+
+/* === VIDEO FULLSCREEN MODE STYLES === */
+.video-fullscreen-active {
+  position: fixed !important;
+  inset: 0;
+  width: 100vw !important;
+  height: 100vh !important;
+  background-color: black;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.video-fullscreen-active video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Hide scrollbars and isolate fullscreen mode */
+body:has(.video-fullscreen-active) {
+  overflow: hidden;
+}
+
+/* make modal composer slimmer and slightly separated */
+#modal-review-composer { padding: 0.75rem; }
+#modal-reviews-list-wrapper { padding-bottom: 88px; } /* enough space for sticky composer */
+
+/* --- Modern Responsive Review Modal Enhancements --- */
+
+/* Ensure the review modal acts like a mobile drawer */
+#all-reviews-modal-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-height: 95vh;
+}
+
+/* Allow scrollable middle section between header and composer */
+#modal-reviews-list-wrapper {
+  flex: 1;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  padding-bottom: 6rem; /* extra room for sticky composer & end message */
+}
+
+/* Smooth sticky top zones */
+#modal-review-composer {
+  backdrop-filter: blur(6px);
+}
+
+/* Keep modal rounded look consistent on desktop */
+@media (min-width: 768px) {
+  #all-reviews-modal-content {
+    max-height: 85vh;
+    border-radius: 0.75rem;
+  }
+}
+
+/* Small devices: make modal more like full-screen drawer */
+@media (max-width: 640px) {
+  #all-reviews-modal-content {
+    max-height: 100vh;
+    border-radius: 0;
+  }
+  #modal-scroll-top-btn {
+    bottom: 80px;
+    right: 16px;
+  }
+}
+
+/* Prevent last review cutoff by ensuring scrollable area has breathing space */
+#modal-end-of-reviews-message,
+#modal-reviews-loading-indicator {
+  margin-bottom: 2rem;
+}
+
+/* Subtle shadow for sticky top elements to separate layers */
+#modal-review-composer,
+#modal-overall-avg-rating,
+#modal-title {
+  box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+}
+
+/* Hide scrollbar on webkit browsers but allow scroll */
+.hide-scrollbar::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+/* Scroll momentum on iOS */
+#modal-reviews-list-wrapper {
+  -webkit-overflow-scrolling: touch;
+}
+
+#modal-scroll-top-btn:active {
+  transform: scale(0.95);
+}
+#modal-review-composer {
+  transition: background-color 0.2s ease;
+}
+
+/* ---------- Modal Composer & Scroll-to-Top Fixes ---------- */
+
+/* Define composer height variable for spacing */
+:root { --modal-composer-h: 72px; }
+
+/* Adjust scroll area to avoid last review cutoff */
+#modal-reviews-list-wrapper {
+  padding-bottom: calc(var(--modal-composer-h) + 32px); /* space for composer + breathing room */
+}
+
+/* === Scroll-to-Top Button: Responsive Safe Position (Final Version) === */
+#modal-scroll-top-btn {
+  position: fixed;
+  right: 1rem; /* nicely spaced from right edge */
+  bottom: calc(var(--modal-composer-h, 72px) + 1rem); /* always sits above composer */
+  z-index: 50;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  will-change: opacity, transform;
+  cursor: pointer;
+}
+
+/* Hover micro animation (desktop) */
+#modal-scroll-top-btn:hover {
+  transform: translateY(-3px);
+}
+
+/* Touch feedback (mobile tap) */
+#modal-scroll-top-btn:active {
+  transform: scale(0.95);
+}
+
+/* Slightly adjust for smaller screens so it stays visible */
+@media (max-width: 640px) {
+  #modal-scroll-top-btn {
+    right: 0.85rem;
+    bottom: calc(var(--modal-composer-h, 84px) + 0.75rem);
+  }
+}
+
+/* Ensure variable default if not already set */
+:root {
+  --modal-composer-h: 72px;
+}
+
+/* Slightly smaller on very small screens */
+@media (max-width: 420px) {
+  :root { --modal-composer-h: 84px; }
+  #modal-scroll-top-btn { right: 14px; }
+}
+
+/* Add draggable handle for mobile bottom-sheet modal look */
+.modal-drag-handle {
+  width: 48px;
+  height: 5px;
+  background: #e6e6e6;
+  border-radius: 9999px;
+  margin: 8px auto 4px auto;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.04);
+}
+
+/* Smooth drag transition styles */
+#all-reviews-modal-content.dragging {
+  transition: none !important;
+}
+#all-reviews-modal-content.restore {
+  transition: transform 240ms cubic-bezier(.22,.9,.3,1);
+}
+
+/* Modal composer avatar responsiveness */
+#modal-review-composer .w-10 {
+  min-width: 2.5rem;
+  min-height: 2.5rem;
+}
+@media (max-width: 420px) {
+  #modal-review-composer .w-10 {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
+}
+
+/* === Premium Modal Composer Responsiveness === */
+#modal-review-comment-input {
+  display: block;
+  width: 100%;
+  min-height: 2.25rem;
+  max-height: 200px; /* prevent it from growing endlessly */
+  overflow-y: auto;
+  resize: none;
+  line-height: 1.4;
+  word-break: break-word;
+  white-space: pre-wrap;
+  transition: height 0.15s ease;
+}
+
+/* Ensure smooth spacing and consistent layout */
+#modal-review-composer .flex {
+  align-items: flex-start;
+}
+
+@media (max-width: 420px) {
+  #modal-review-comment-input {
+    font-size: 0.9rem;
+    padding: 0.45rem 0.6rem;
+  }
+}
+
+/* === Theme-Aware Premium Focus Glow for Review Composer === */
+
+/* Light mode (default) */
+#modal-review-comment-input:focus {
+  outline: none;
+  border-color: var(--liyog-green);
+  box-shadow:
+    0 0 4px rgba(40, 164, 40, 0.4),
+    0 0 8px rgba(40, 164, 40, 0.3),
+    0 0 16px rgba(40, 164, 40, 0.15);
+  transition: box-shadow 0.25s ease, border-color 0.2s ease;
+  animation: composerGlowPulseLight 2.5s infinite ease-in-out;
+}
+
+/* Light mode pulsing animation */
+@keyframes composerGlowPulseLight {
+  0%, 100% {
+    box-shadow:
+      0 0 6px rgba(40, 164, 40, 0.45),
+      0 0 10px rgba(40, 164, 40, 0.25);
+  }
+  50% {
+    box-shadow:
+      0 0 10px rgba(40, 164, 40, 0.55),
+      0 0 18px rgb
